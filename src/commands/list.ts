@@ -68,8 +68,8 @@ export async function handleListCommand(interaction: InteractionRequest, env: En
         return {
             type: InteractionResponseType.ChannelMessageWithSource,
             data: {
-                embeds: [embed],
-                flags: 0 // 公開メッセージ
+                embeds: [embed]
+                // flags を省略（デフォルトで公開メッセージ）
             }
         };
 
