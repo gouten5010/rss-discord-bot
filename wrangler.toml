@@ -1,0 +1,28 @@
+name = "rss-discord-bot"
+main = "src/index.ts"
+compatibility_date = "2024-01-15"
+node_compat = true
+
+# 15分間隔でRSSチェックを実行（Phase 2で使用）
+# [triggers]
+# crons = ["*/15 * * * *"]
+
+# KV Namespaceの設定
+# 実際のデプロイ前に以下のコマンドでKVを作成してください:
+# wrangler kv:namespace create RSS_STORAGE
+# wrangler kv:namespace create RSS_STORAGE --preview
+[[kv_namespaces]]
+binding = "RSS_STORAGE"
+id = "your-kv-namespace-id"      # 実際のKV namespace IDに置き換えてください
+preview_id = "your-preview-kv-id" # プレビュー用のKV namespace IDに置き換えてください
+
+# 環境変数（シークレット）の設定
+# 以下のコマンドで設定してください:
+# wrangler secret put DISCORD_BOT_TOKEN
+# wrangler secret put DISCORD_APPLICATION_ID
+# wrangler secret put DISCORD_PUBLIC_KEY
+# wrangler secret put DISCORD_WEBHOOK_URL
+
+[vars]
+# 開発用の環境変数（プレーンテキスト）
+ENVIRONMENT = "development"

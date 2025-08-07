@@ -1,0 +1,30 @@
+{
+  "name": "rss-discord-bot",
+  "version": "1.0.0",
+  "description": "RSS feed to Discord notification bot using Cloudflare Workers",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "register-commands": "tsx scripts/register-commands.ts",
+    "type-check": "tsc --noEmit"
+  },
+  "keywords": [
+    "discord-bot",
+    "rss",
+    "cloudflare-workers",
+    "typescript"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20240208.0",
+    "@types/node": "^20.11.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.0",
+    "wrangler": "^3.24.0"
+  },
+  "dependencies": {
+    "discord-api-types": "^0.37.61"
+  }
+}
