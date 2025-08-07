@@ -20,9 +20,20 @@ export default {
         try {
             const url = new URL(request.url);
 
-            // Discord Interaction の処理
-            if (request.method === 'POST' && url.pathname === '/discord') {
-                return await handleDiscordInteraction(request, env);
+            // Discord Interaction の処理（POSTのみ）
+            if (url.pathname === '/discord') {
+                if (request.method === 'POST') {
+                    return await handleDiscordInteraction(request, env);
+                } else {
+                    // GET リクエストには適切なレスポンス
+                    return new Response('Discord Interaction Endpoint - POST only', {
+                        status: 405,
+                        headers: {
+                            'Allow': 'POST',
+                            'Content-Type': 'text/plain'
+                        }
+                    });
+                }
             }
 
             // ヘルスチェック用エンドポイント
@@ -97,19 +108,27 @@ export default {
  */
 async function handleDiscordInteraction(request: Request, env: Env): Promise<Response> {
     try {
-        // Discord署名の検証
-        const isValid = await verifyDiscordRequest(request, env);
-        if (!isValid) {
+        // Content-Typeチェック
+        const contentType = request.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            console.log('Invalid content-type:', contentType);
+            return new Response('Bad Request', { status: 400 });
+        }
+
+        // Discord署名の検証（bodyも一緒に取得）
+        const { valid, body } = await verifyDiscordRequest(request, env);
+        if (!valid) {
             console.log('Invalid Discord signature');
             return new Response('Unauthorized', { status: 401 });
         }
 
-        // リクエストボディの解析
-        const body = await request.text();
+        console.log('Received Discord interaction:', body);
+
         const interaction: InteractionRequest = JSON.parse(body);
 
         // PING応答（Discord Bot検証用）
         if (interaction.type === InteractionType.Ping) {
+            console.log('Responding to Discord PING');
             return new Response(JSON.stringify({
                 type: InteractionResponseType.Pong
             }), {

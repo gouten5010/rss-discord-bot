@@ -20,12 +20,12 @@ import {
 export async function verifyDiscordRequest(
     request: Request,
     env: Env
-): Promise<boolean> {
+): Promise<{ valid: boolean; body: string }> {
     const signature = request.headers.get('x-signature-ed25519');
     const timestamp = request.headers.get('x-signature-timestamp');
 
     if (!signature || !timestamp) {
-        return false;
+        return { valid: false, body: '' };
     }
 
     try {
@@ -36,10 +36,10 @@ export async function verifyDiscordRequest(
             timestamp,
             env.DISCORD_PUBLIC_KEY
         );
-        return isValid;
+        return { valid: isValid, body };
     } catch (error) {
         console.error('Discord signature verification failed:', error);
-        return false;
+        return { valid: false, body: '' };
     }
 }
 
