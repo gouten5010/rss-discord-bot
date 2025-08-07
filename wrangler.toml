@@ -8,13 +8,10 @@ compatibility_flags = ["nodejs_compat"]
 # crons = ["*/15 * * * *"]
 
 # KV Namespaceの設定
-# 実際のデプロイ前に以下のコマンドでKVを作成してください:
-# wrangler kv:namespace create RSS_STORAGE
-# wrangler kv:namespace create RSS_STORAGE --preview
 [[kv_namespaces]]
 binding = "RSS_STORAGE"
-id = "your-kv-namespace-id"      # 実際のKV namespace IDに置き換えてください
-preview_id = "your-preview-kv-id" # プレビュー用のKV namespace IDに置き換えてください
+id = "2b68d688086c42278caa6010fcead223"      # 本番用KV namespace ID
+preview_id = "65960b9a4a584fe5ba9d9b6692b717e8" # プレビュー用KV namespace ID
 
 # 環境変数（シークレット）の設定
 # 以下のコマンドで設定してください:
