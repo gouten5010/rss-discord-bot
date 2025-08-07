@@ -25,6 +25,7 @@
     "wrangler": "^3.24.0"
   },
   "dependencies": {
-    "discord-api-types": "^0.37.61"
+    "discord-api-types": "^0.37.61",
+    "dotenv": "^16.4.0"
   }
 }
