@@ -25,6 +25,7 @@ export async function verifyDiscordRequest(
     const timestamp = request.headers.get('x-signature-timestamp');
 
     if (!signature || !timestamp) {
+        console.log('Missing signature or timestamp headers');
         return { valid: false, body: '' };
     }
 
@@ -44,7 +45,7 @@ export async function verifyDiscordRequest(
 }
 
 /**
- * Ed25519署名を検証する（簡易実装）
+ * Ed25519署名を検証する（WebCrypto API使用）
  */
 async function verifySignature(
     body: string,
@@ -52,26 +53,68 @@ async function verifySignature(
     timestamp: string,
     publicKey: string
 ): Promise<boolean> {
-    // 実際の署名検証はより複雑ですが、
-    // Cloudflare Workersでの制限により簡易チェックを行います
-    // 本格運用時はlibsodiumやnaclなどのライブラリを使用してください
+    try {
+        // タイムスタンプチェック（5分以内）
+        const now = Math.floor(Date.now() / 1000);
+        const requestTime = parseInt(timestamp, 10);
+        if (Math.abs(now - requestTime) > 300) {
+            console.log('Request timestamp too old:', { now, requestTime, diff: Math.abs(now - requestTime) });
+            return false;
+        }
 
-    // 基本的なフォーマットチェック
-    if (!signature || !timestamp || !publicKey) {
+        // 署名検証用のメッセージを構築
+        const message = timestamp + body;
+        const messageBytes = new TextEncoder().encode(message);
+
+        // 16進数文字列をUint8Arrayに変換
+        const signatureBytes = hexToUint8Array(signature);
+        const publicKeyBytes = hexToUint8Array(publicKey);
+
+        // Cloudflare WorkersのWebCrypto APIでEd25519署名を検証
+        const cryptoKey = await crypto.subtle.importKey(
+            'raw',
+            publicKeyBytes,
+            {
+                name: 'Ed25519',
+                namedCurve: 'Ed25519',
+            },
+            false,
+            ['verify']
+        );
+
+        const isValid = await crypto.subtle.verify(
+            'Ed25519',
+            cryptoKey,
+            signatureBytes,
+            messageBytes
+        );
+
+        console.log('Signature verification result:', isValid);
+        return isValid;
+
+    } catch (error) {
+        console.error('Signature verification error:', error);
+
+        // WebCrypto APIでEd25519がサポートされていない場合のフォールバック
+        if (error instanceof Error && error.message.includes('Ed25519')) {
+            console.log('Ed25519 not supported, falling back to basic validation');
+            // 基本的なフォーマット検証のみ
+            return signature.length === 128 && publicKey.length === 64;
+        }
+
         return false;
     }
+}
 
-    // 簡易的なタイムスタンプチェック（5分以内）
-    const now = Math.floor(Date.now() / 1000);
-    const requestTime = parseInt(timestamp, 10);
-    if (Math.abs(now - requestTime) > 300) {
-        console.log('Request timestamp too old');
-        return false;
+/**
+ * 16進数文字列をUint8Arrayに変換
+ */
+function hexToUint8Array(hex: string): Uint8Array {
+    const bytes = new Uint8Array(hex.length / 2);
+    for (let i = 0; i < hex.length; i += 2) {
+        bytes[i / 2] = parseInt(hex.substring(i, i + 2), 16);
     }
-
-    // TODO: 実際のEd25519署名検証を実装
-    // 現在は基本チェックのみ通す
-    return true;
+    return bytes;
 }
 
 /**

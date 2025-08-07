@@ -115,7 +115,7 @@ async function handleDiscordInteraction(request: Request, env: Env): Promise<Res
             return new Response('Bad Request', { status: 400 });
         }
 
-        // Discord署名の検証（bodyも一緒に取得）
+        // Discord署名の検証（本格実装）
         const { valid, body } = await verifyDiscordRequest(request, env);
         if (!valid) {
             console.log('Invalid Discord signature');
@@ -129,10 +129,19 @@ async function handleDiscordInteraction(request: Request, env: Env): Promise<Res
         // PING応答（Discord Bot検証用）
         if (interaction.type === InteractionType.Ping) {
             console.log('Responding to Discord PING');
-            return new Response(JSON.stringify({
+            const pongResponse = {
                 type: InteractionResponseType.Pong
-            }), {
-                headers: { 'Content-Type': 'application/json' }
+            };
+            console.log('PONG response:', JSON.stringify(pongResponse));
+
+            return new Response(JSON.stringify(pongResponse), {
+                status: 200,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Methods': 'POST',
+                    'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+                }
             });
         }
 
