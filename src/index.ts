@@ -1,0 +1,214 @@
+// src/index.ts
+// Cloudflare Workers のメインエントリーポイント
+
+import { InteractionType, InteractionResponseType } from 'discord-api-types/v10';
+import { Env, InteractionRequest, COMMANDS } from './types';
+import { verifyDiscordRequest, hasAdminPermission, createErrorResponse, notifySystemError } from './utils/discord';
+import { handleAddCommand } from './commands/add';
+import { handleRemoveCommand } from './commands/remove';
+import { handleRemoveAllCommand } from './commands/remove-all';
+import { handleListCommand } from './commands/list';
+
+/**
+ * Cloudflare Workers のメインハンドラ
+ */
+export default {
+    /**
+     * HTTP リクエスト処理
+     */
+    async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+        try {
+            const url = new URL(request.url);
+
+            // Discord Interaction の処理
+            if (request.method === 'POST' && url.pathname === '/discord') {
+                return await handleDiscordInteraction(request, env);
+            }
+
+            // ヘルスチェック用エンドポイント
+            if (request.method === 'GET' && url.pathname === '/health') {
+                return new Response(JSON.stringify({
+                    status: 'healthy',
+                    timestamp: new Date().toISOString(),
+                    version: '1.0.0-phase1'
+                }), {
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            }
+
+            // 手動テスト用エンドポイント（Phase 2で実装予定）
+            if (request.method === 'POST' && url.pathname === '/test') {
+                return new Response(JSON.stringify({
+                    message: 'RSS check endpoint - Phase 2で実装予定'
+                }), {
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            }
+
+            // デフォルトレスポンス
+            return new Response(
+                'RSS Discord Bot - Phase 1\n\nEndpoints:\n- POST /discord - Discord Interactions\n- GET /health - Health Check\n- POST /test - Manual RSS Check (Phase 2)',
+                { headers: { 'Content-Type': 'text/plain' } }
+            );
+
+        } catch (error) {
+            console.error('Request handling error:', error);
+
+            // システムエラーをDiscordに通知
+            if (env.DISCORD_WEBHOOK_URL) {
+                await notifySystemError(
+                    env.DISCORD_WEBHOOK_URL,
+                    error instanceof Error ? error.message : 'Unknown error',
+                    'Request processing failed'
+                );
+            }
+
+            return new Response('Internal Server Error', { status: 500 });
+        }
+    },
+
+    /**
+     * Cron Trigger での定期実行（Phase 2で実装予定）
+     */
+    async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
+        console.log('Cron trigger fired - Phase 2で実装予定');
+
+        try {
+            // Phase 2でRSSチェック処理を実装予定
+            console.log('RSS check would run here in Phase 2');
+
+        } catch (error) {
+            console.error('Scheduled task error:', error);
+
+            // エラー通知
+            if (env.DISCORD_WEBHOOK_URL) {
+                await notifySystemError(
+                    env.DISCORD_WEBHOOK_URL,
+                    error instanceof Error ? error.message : 'Unknown error',
+                    'Scheduled RSS check failed'
+                );
+            }
+        }
+    }
+};
+
+/**
+ * Discord Interaction の処理
+ */
+async function handleDiscordInteraction(request: Request, env: Env): Promise<Response> {
+    try {
+        // Discord署名の検証
+        const isValid = await verifyDiscordRequest(request, env);
+        if (!isValid) {
+            console.log('Invalid Discord signature');
+            return new Response('Unauthorized', { status: 401 });
+        }
+
+        // リクエストボディの解析
+        const body = await request.text();
+        const interaction: InteractionRequest = JSON.parse(body);
+
+        // PING応答（Discord Bot検証用）
+        if (interaction.type === InteractionType.Ping) {
+            return new Response(JSON.stringify({
+                type: InteractionResponseType.Pong
+            }), {
+                headers: { 'Content-Type': 'application/json' }
+            });
+        }
+
+        // アプリケーションコマンドの処理
+        if (interaction.type === InteractionType.ApplicationCommand && interaction.data) {
+            return await handleApplicationCommand(interaction, env);
+        }
+
+        // 未対応のInteractionタイプ
+        console.log('Unhandled interaction type:', interaction.type);
+        return new Response(JSON.stringify({
+            type: InteractionResponseType.ChannelMessageWithSource,
+            data: {
+                content: '未対応のコマンドです。',
+                flags: 64 // EPHEMERAL
+            }
+        }), {
+            headers: { 'Content-Type': 'application/json' }
+        });
+
+    } catch (error) {
+        console.error('Discord interaction handling error:', error);
+
+        return new Response(JSON.stringify({
+            type: InteractionResponseType.ChannelMessageWithSource,
+            data: {
+                content: '❌ コマンドの処理中にエラーが発生しました。',
+                flags: 64 // EPHEMERAL
+            }
+        }), {
+            headers: { 'Content-Type': 'application/json' }
+        });
+    }
+}
+
+/**
+ * アプリケーションコマンドの処理
+ */
+async function handleApplicationCommand(interaction: InteractionRequest, env: Env): Promise<Response> {
+    const commandName = interaction.data?.name;
+
+    if (!commandName) {
+        return new Response(JSON.stringify(createErrorResponse('コマンド名が見つかりません。')), {
+            headers: { 'Content-Type': 'application/json' }
+        });
+    }
+
+    // 管理者権限チェック
+    if (!hasAdminPermission(interaction)) {
+        return new Response(JSON.stringify(createErrorResponse('このコマンドを実行する権限がありません。')), {
+            headers: { 'Content-Type': 'application/json' }
+        });
+    }
+
+    console.log(`Processing command: ${commandName}`);
+
+    // コマンドごとの処理
+    try {
+        let response;
+
+        switch (commandName) {
+            case COMMANDS.ADD:
+                response = await handleAddCommand(interaction, env);
+                break;
+            case COMMANDS.REMOVE:
+                response = await handleRemoveCommand(interaction, env);
+                break;
+            case COMMANDS.REMOVEALL:
+                response = await handleRemoveAllCommand(interaction, env);
+                break;
+            case COMMANDS.LIST:
+                response = await handleListCommand(interaction, env);
+                break;
+            default:
+                response = createErrorResponse(`未知のコマンドです: ${commandName}`);
+        }
+
+        return new Response(JSON.stringify(response), {
+            headers: { 'Content-Type': 'application/json' }
+        });
+
+    } catch (error) {
+        console.error(`Command ${commandName} failed:`, error);
+
+        // エラーをDiscordに通知
+        if (env.DISCORD_WEBHOOK_URL) {
+            await notifySystemError(
+                env.DISCORD_WEBHOOK_URL,
+                error instanceof Error ? error.message : 'Unknown error',
+                `Command failed: ${commandName}`
+            );
+        }
+
+        return new Response(JSON.stringify(createErrorResponse('コマンドの実行に失敗しました。')), {
+            headers: { 'Content-Type': 'application/json' }
+        });
+    }
+}
