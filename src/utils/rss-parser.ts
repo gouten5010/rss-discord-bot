@@ -196,6 +196,10 @@ function parseRSS10Basic(xmlText: string): FeedInfo | null {
 function cleanText(text: string): string {
     return text
         .replace(/<[^>]*>/g, '') // HTMLタグを除去
+        // 数値文字参照をデコード
+        .replace(/&#x([0-9a-fA-F]+);/g, (match, hex) => String.fromCharCode(parseInt(hex, 16)))
+        .replace(/&#([0-9]+);/g, (match, dec) => String.fromCharCode(parseInt(dec, 10)))
+        // 名前付き文字参照をデコード
         .replace(/&lt;/g, '<')
         .replace(/&gt;/g, '>')
         .replace(/&amp;/g, '&')
@@ -203,6 +207,7 @@ function cleanText(text: string): string {
         .replace(/&#x27;/g, "'")
         .replace(/&#x2F;/g, '/')
         .replace(/&apos;/g, "'")
+        .replace(/&nbsp;/g, ' ')
         .replace(/\s+/g, ' ') // 連続する空白を1つに
         .trim();
 }

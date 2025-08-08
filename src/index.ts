@@ -198,45 +198,89 @@ async function handleApplicationCommand(interaction: InteractionRequest, env: En
 
     console.log(`Processing command: ${commandName}`);
 
-    // コマンドごとの処理
-    try {
-        let response;
+    // /rss コマンドの処理
+    if (commandName === 'rss') {
+        const subcommand = interaction.data?.options?.[0]?.name;
+        const subcommandOptions = interaction.data?.options?.[0]?.options;
 
-        switch (commandName) {
-            case COMMANDS.ADD:
-                response = await handleAddCommand(interaction, env);
-                break;
-            case COMMANDS.REMOVE:
-                response = await handleRemoveCommand(interaction, env);
-                break;
-            case COMMANDS.REMOVEALL:
-                response = await handleRemoveAllCommand(interaction, env);
-                break;
-            case COMMANDS.LIST:
-                response = await handleListCommand(interaction, env);
-                break;
-            default:
-                response = createErrorResponse(`未知のコマンドです: ${commandName}`);
+        if (!subcommand) {
+            return new Response(JSON.stringify(createErrorResponse('サブコマンドが見つかりません。')), {
+                headers: { 'Content-Type': 'application/json' }
+            });
         }
 
-        return new Response(JSON.stringify(response), {
-            headers: { 'Content-Type': 'application/json' }
-        });
+        console.log(`Processing RSS subcommand: ${subcommand}`);
 
-    } catch (error) {
-        console.error(`Command ${commandName} failed:`, error);
+        // サブコマンド用のinteractionオブジェクトを作成
+        const subInteraction = {
+            ...interaction,
+            data: {
+                ...interaction.data,
+                name: subcommand,
+                options: subcommandOptions || []
+            }
+        };
 
-        // エラーをDiscordに通知
-        if (env.DISCORD_WEBHOOK_URL) {
-            await notifySystemError(
-                env.DISCORD_WEBHOOK_URL,
-                error instanceof Error ? error.message : 'Unknown error',
-                `Command failed: ${commandName}`
-            );
+        try {
+            let response;
+
+            switch (subcommand) {
+                case 'add':
+                    response = await handleAddCommand(subInteraction, env);
+                    break;
+                case 'remove':
+                    response = await handleRemoveCommand(subInteraction, env);
+                    break;
+                case 'removeall':
+                    response = await handleRemoveAllCommand(subInteraction, env);
+                    break;
+                case 'list':
+                    response = await handleListCommand(subInteraction, env);
+                    break;
+                case 'test':
+                    // Phase 2で実装予定
+                    response = createErrorResponse('testコマンドはPhase 2で実装予定です。');
+                    break;
+                case 'run':
+                    // Phase 2で実装予定
+                    response = createErrorResponse('runコマンドはPhase 2で実装予定です。');
+                    break;
+                case 'pause':
+                    // Phase 3で実装予定
+                    response = createErrorResponse('pauseコマンドはPhase 3で実装予定です。');
+                    break;
+                case 'restart':
+                    // Phase 3で実装予定
+                    response = createErrorResponse('restartコマンドはPhase 3で実装予定です。');
+                    break;
+                default:
+                    response = createErrorResponse(`未知のサブコマンドです: ${subcommand}`);
+            }
+
+            return new Response(JSON.stringify(response), {
+                headers: { 'Content-Type': 'application/json' }
+            });
+
+        } catch (error) {
+            console.error(`Subcommand ${subcommand} failed:`, error);
+
+            // エラーをDiscordに通知
+            if (env.DISCORD_WEBHOOK_URL) {
+                await notifySystemError(
+                    env.DISCORD_WEBHOOK_URL,
+                    error instanceof Error ? error.message : 'Unknown error',
+                    `Subcommand failed: ${subcommand}`
+                );
+            }
+
+            return new Response(JSON.stringify(createErrorResponse('コマンドの実行に失敗しました。')), {
+                headers: { 'Content-Type': 'application/json' }
+            });
         }
-
-        return new Response(JSON.stringify(createErrorResponse('コマンドの実行に失敗しました。')), {
-            headers: { 'Content-Type': 'application/json' }
-        });
     }
+
+    // その他のコマンド（将来の拡張用）
+    return new Response(JSON.stringify(createErrorResponse(`未知のコマンドです: ${commandName}`)), {
+        headers: { 'Content-Type': 'application/json' }
+    });
 }

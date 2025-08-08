@@ -31,7 +31,13 @@ export async function handleAddCommand(interaction: InteractionRequest, env: Env
         ? nameOption.value.trim()
         : undefined;
 
-    console.log(`Adding feed: ${feedUrl} ${customName ? `(${customName})` : ''}`);
+    console.log(`Adding feed: ${feedUrl}${customName ? ` (Custom name: ${customName})` : ''}`);
+    console.log('All options received:', JSON.stringify(options, null, 2));
+    console.log('Parsed options:', {
+        urlOption: urlOption ? { name: urlOption.name, value: urlOption.value } : null,
+        nameOption: nameOption ? { name: nameOption.name, value: nameOption.value } : null,
+        customName
+    });
 
     try {
         // URLの基本的なバリデーション

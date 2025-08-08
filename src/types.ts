@@ -120,7 +120,13 @@ export interface InteractionRequest {
         name: string;
         options?: Array<{
             name: string;
-            value: string | number | boolean;
+            value?: string | number | boolean;
+            type?: number;
+            options?: Array<{
+                name: string;
+                value: string | number | boolean;
+                type?: number;
+            }>;
         }>;
     };
     member?: {

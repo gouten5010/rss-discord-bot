@@ -15,97 +15,95 @@ if (!DISCORD_BOT_TOKEN || !DISCORD_APPLICATION_ID) {
     process.exit(1);
 }
 
-// Phase 1で実装するコマンド定義
+// /rss ベースのサブコマンド定義
 const commands = [
     {
-        name: 'add',
-        description: 'RSSフィードを追加します',
+        name: 'rss',
+        description: 'RSSフィード管理コマンド',
         options: [
             {
-                name: 'url',
-                description: 'RSS/AtomフィードのURL',
-                type: ApplicationCommandOptionType.String,
-                required: true,
+                name: 'add',
+                description: 'RSSフィードを追加します',
+                type: ApplicationCommandOptionType.Subcommand,
+                options: [
+                    {
+                        name: 'url',
+                        description: 'RSS/AtomフィードのURL',
+                        type: ApplicationCommandOptionType.String,
+                        required: true,
+                    },
+                ],
             },
             {
-                name: 'name',
-                description: 'フィードのカスタム名（省略可）',
-                type: ApplicationCommandOptionType.String,
-                required: false,
+                name: 'remove',
+                description: 'RSSフィードを削除します',
+                type: ApplicationCommandOptionType.Subcommand,
+                options: [
+                    {
+                        name: 'identifier',
+                        description: 'フィードID、URL、または名前',
+                        type: ApplicationCommandOptionType.String,
+                        required: true,
+                    },
+                ],
+            },
+            {
+                name: 'removeall',
+                description: 'すべてのRSSフィードを削除します',
+                type: ApplicationCommandOptionType.Subcommand,
+            },
+            {
+                name: 'list',
+                description: '登録されているRSSフィード一覧を表示します',
+                type: ApplicationCommandOptionType.Subcommand,
+            },
+            {
+                name: 'test',
+                description: 'RSSフィードのテスト取得を行います',
+                type: ApplicationCommandOptionType.Subcommand,
+                options: [
+                    {
+                        name: 'url',
+                        description: 'テストするRSS/AtomフィードのURL',
+                        type: ApplicationCommandOptionType.String,
+                        required: true,
+                    },
+                ],
+            },
+            {
+                name: 'run',
+                description: 'RSS新着チェックを即座に実行します',
+                type: ApplicationCommandOptionType.Subcommand,
+            },
+            {
+                name: 'pause',
+                description: 'RSSフィードを一時停止します',
+                type: ApplicationCommandOptionType.Subcommand,
+                options: [
+                    {
+                        name: 'identifier',
+                        description: 'フィードID、URL、または名前',
+                        type: ApplicationCommandOptionType.String,
+                        required: true,
+                    },
+                ],
+            },
+            {
+                name: 'restart',
+                description: 'RSSフィードを再開します',
+                type: ApplicationCommandOptionType.Subcommand,
+                options: [
+                    {
+                        name: 'identifier',
+                        description: 'フィードID、URL、または名前',
+                        type: ApplicationCommandOptionType.String,
+                        required: true,
+                    },
+                ],
             },
         ],
         default_member_permissions: '32', // MANAGE_GUILD permission
     },
-    {
-        name: 'remove',
-        description: 'RSSフィードを削除します',
-        options: [
-            {
-                name: 'identifier',
-                description: 'フィードID、URL、または名前',
-                type: ApplicationCommandOptionType.String,
-                required: true,
-            },
-        ],
-        default_member_permissions: '32', // MANAGE_GUILD permission
-    },
-    {
-        name: 'removeall',
-        description: 'すべてのRSSフィードを削除します',
-        default_member_permissions: '32', // MANAGE_GUILD permission
-    },
-    {
-        name: 'list',
-        description: '登録されているRSSフィード一覧を表示します',
-        default_member_permissions: '32', // MANAGE_GUILD permission
-    },
-    // Phase 2, 3で実装予定のコマンド（コメントアウト）
-    /*
-    {
-      name: 'test',
-      description: 'RSSフィードのテスト取得を行います',
-      options: [
-        {
-          name: 'url',
-          description: 'テストするRSS/AtomフィードのURL',
-          type: ApplicationCommandOptionType.String,
-          required: true,
-        },
-      ],
-      default_member_permissions: '32',
-    },
-    {
-      name: 'run',
-      description: 'RSS新着チェックを即座に実行します',
-      default_member_permissions: '32',
-    },
-    {
-      name: 'pause',
-      description: 'RSSフィードを一時停止します',
-      options: [
-        {
-          name: 'identifier',
-          description: 'フィードID、URL、または名前',
-          type: ApplicationCommandOptionType.String,
-          required: true,
-        },
-      ],
-      default_member_permissions: '32',
-    },
-    {
-      name: 'restart',
-      description: 'RSSフィードを再開します',
-      options: [
-        {
-          name: 'identifier',
-          description: 'フィードID、URL、または名前',
-          type: ApplicationCommandOptionType.String,
-          required: true,
-        },
-      ],
-      default_member_permissions: '32',
-    },
-    */
 ];
 
 /**
