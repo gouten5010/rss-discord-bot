@@ -3,9 +3,9 @@ main = "src/index.ts"
 compatibility_date = "2024-01-15"
 compatibility_flags = ["nodejs_compat"]
 
-# 15分間隔でRSSチェックを実行（Phase 2で使用）
-# [triggers]
-# crons = ["*/15 * * * *"]
+# 15分間隔でRSSチェックを実行
+[triggers]
+crons = ["*/15 * * * *"]
 
 # KV Namespaceの設定
 [[kv_namespaces]]
