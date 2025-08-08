@@ -5,6 +5,7 @@ import { InteractionType, InteractionResponseType } from 'discord-api-types/v10'
 import { Env, InteractionRequest, COMMANDS } from './types';
 import { verifyDiscordRequest, hasAdminPermission, createErrorResponse, notifySystemError } from './utils/discord';
 import { RSSChecker } from './utils/rss-checker';
+import { KVStorageManager } from './utils/kv-storage';
 import { handleAddCommand } from './commands/add';
 import { handleRemoveCommand } from './commands/remove';
 import { handleRemoveAllCommand } from './commands/remove-all';
@@ -62,6 +63,37 @@ export default {
                 }), {
                     headers: { 'Content-Type': 'application/json' }
                 });
+            }
+
+            // デバッグ用：既読記事クリア
+            if (request.method === 'POST' && url.pathname === '/clear-read') {
+                try {
+                    const body = await request.text();
+                    const { feedId } = JSON.parse(body || '{}');
+
+                    const kvManager = new KVStorageManager(env);
+                    if (feedId) {
+                        await kvManager.clearReadArticles(feedId);
+                        return new Response(JSON.stringify({
+                            success: true,
+                            message: `Feed ${feedId} の既読記事をクリアしました`
+                        }), { headers: { 'Content-Type': 'application/json' } });
+                    } else {
+                        const feeds = await kvManager.getFeeds();
+                        for (const feed of feeds) {
+                            await kvManager.clearReadArticles(feed.id);
+                        }
+                        return new Response(JSON.stringify({
+                            success: true,
+                            message: '全フィードの既読記事をクリアしました'
+                        }), { headers: { 'Content-Type': 'application/json' } });
+                    }
+                } catch (error) {
+                    return new Response(JSON.stringify({
+                        success: false,
+                        error: error instanceof Error ? error.message : 'Unknown error'
+                    }), { headers: { 'Content-Type': 'application/json' } });
+                }
             }
 
             // デフォルトレスポンス

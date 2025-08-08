@@ -170,6 +170,65 @@ export class RSSChecker {
     }
 
     /**
+     * 軽量版RSS新着チェック（/rss run用、2秒以内で完了）
+     */
+    async quickCheck(): Promise<{ newArticles: number; checkedFeeds: number }> {
+        console.log('🔄 軽量RSS新着チェック開始...');
+
+        try {
+            const feeds = await this.kvManager.getFeeds();
+            const activeFeeds = feeds.filter(feed => feed.status === 'active').slice(0, 1); // 最初の1件のみ
+
+            if (activeFeeds.length === 0) {
+                console.log('ℹ️ チェック対象のフィードがありません');
+                return { newArticles: 0, checkedFeeds: 0 };
+            }
+
+            let newArticles = 0;
+
+            for (const feed of activeFeeds) {
+                try {
+                    const articles = await parseArticles(feed.url, 2); // 最新2件のみ
+
+                    if (articles.length === 0) continue;
+
+                    const readArticles = await this.kvManager.getReadArticles(feed.id);
+                    console.log(`📚 ${feed.id}の既読記事数: ${readArticles.length}`);
+
+                    const newOnes = articles.filter(article => {
+                        const hash = this.getArticleHash(article);
+                        const isNew = !readArticles.includes(hash);
+                        console.log(`📄 記事: "${article.title}" - ハッシュ: ${hash} - 新着: ${isNew}`);
+                        return isNew;
+                    });
+
+                    console.log(`📰 ${feed.id}: ${articles.length}件中 ${newOnes.length}件が新着`);
+
+                    for (const article of newOnes) {
+                        const success = await this.postArticleToDiscord(article, feed);
+                        if (success) {
+                            newArticles++;
+                            await this.kvManager.addReadArticle(feed.id, this.getArticleHash(article));
+                        }
+                    }
+
+                    await this.kvManager.updateLastChecked(feed.id);
+
+                } catch (error) {
+                    console.error(`❌ フィード ${feed.id} のクイックチェックに失敗:`, error);
+                }
+            }
+
+            console.log(`✅ 軽量RSS新着チェック完了 - 新着: ${newArticles}件`);
+            return { newArticles, checkedFeeds: activeFeeds.length };
+
+        } catch (error) {
+            console.error('❌ 軽量RSS新着チェックでエラー:', error);
+            throw error;
+        }
+    }
+
+    /**
      * 文字列のハッシュを生成
      */
     private hashString(str: string): string {
