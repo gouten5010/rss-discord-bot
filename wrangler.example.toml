@@ -8,10 +8,14 @@ compatibility_flags = ["nodejs_compat"]
 crons = ["*/15 * * * *"]
 
 # KV Namespaceの設定
+# 使用方法:
+# 1. Cloudflare DashboardでKV Namespaceを作成
+# 2. このファイルをwrangler.tomlにコピー
+# 3. 実際のNamespace IDに置き換え
 [[kv_namespaces]]
 binding = "RSS_STORAGE"
-id = "2b68d688086c42278caa6010fcead223"      # 本番用KV namespace ID
-preview_id = "65960b9a4a584fe5ba9d9b6692b717e8" # プレビュー用KV namespace ID
+id = "your_production_kv_namespace_id_here"
+preview_id = "your_preview_kv_namespace_id_here"
 
 # 環境変数（シークレット）の設定
 # 以下のコマンドで設定してください:
