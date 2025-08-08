@@ -4,10 +4,13 @@
 import { InteractionType, InteractionResponseType } from 'discord-api-types/v10';
 import { Env, InteractionRequest, COMMANDS } from './types';
 import { verifyDiscordRequest, hasAdminPermission, createErrorResponse, notifySystemError } from './utils/discord';
+import { RSSChecker } from './utils/rss-checker';
 import { handleAddCommand } from './commands/add';
 import { handleRemoveCommand } from './commands/remove';
 import { handleRemoveAllCommand } from './commands/remove-all';
 import { handleListCommand } from './commands/list';
+import { handleTestCommand } from './commands/test';
+import { handleRunCommand } from './commands/run';
 
 /**
  * Cloudflare Workers のメインハンドラ
@@ -47,10 +50,15 @@ export default {
                 });
             }
 
-            // 手動テスト用エンドポイント（Phase 2で実装予定）
-            if (request.method === 'POST' && url.pathname === '/test') {
+            // 手動RSS チェック用エンドポイント
+            if (request.method === 'POST' && url.pathname === '/rss-check') {
+                const rssChecker = new RSSChecker(env);
+                await rssChecker.checkAllFeeds();
+
                 return new Response(JSON.stringify({
-                    message: 'RSS check endpoint - Phase 2で実装予定'
+                    success: true,
+                    message: 'RSS check completed',
+                    timestamp: new Date().toISOString()
                 }), {
                     headers: { 'Content-Type': 'application/json' }
                 });
@@ -79,19 +87,21 @@ export default {
     },
 
     /**
-     * Cron Trigger での定期実行（Phase 2で実装予定）
+     * Cron Trigger での定期実行（15分間隔）
      */
     async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
-        console.log('Cron trigger fired - Phase 2で実装予定');
+        console.log('⏰ RSS定期チェック開始 - Cron Trigger実行');
 
         try {
-            // Phase 2でRSSチェック処理を実装予定
-            console.log('RSS check would run here in Phase 2');
+            const rssChecker = new RSSChecker(env);
+            await rssChecker.checkAllFeeds();
+
+            console.log('✅ RSS定期チェック完了');
 
         } catch (error) {
-            console.error('Scheduled task error:', error);
+            console.error('❌ RSS定期チェックでエラー:', error);
 
-            // エラー通知
+            // システムエラーをDiscordに通知
             if (env.DISCORD_WEBHOOK_URL) {
                 await notifySystemError(
                     env.DISCORD_WEBHOOK_URL,
@@ -238,12 +248,10 @@ async function handleApplicationCommand(interaction: InteractionRequest, env: En
                     response = await handleListCommand(subInteraction, env);
                     break;
                 case 'test':
-                    // Phase 2で実装予定
-                    response = createErrorResponse('testコマンドはPhase 2で実装予定です。');
+                    response = await handleTestCommand(subInteraction, env);
                     break;
                 case 'run':
-                    // Phase 2で実装予定
-                    response = createErrorResponse('runコマンドはPhase 2で実装予定です。');
+                    response = await handleRunCommand(subInteraction, env);
                     break;
                 case 'pause':
                     // Phase 3で実装予定
