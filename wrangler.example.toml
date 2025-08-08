@@ -3,6 +3,10 @@ main = "src/index.ts"
 compatibility_date = "2024-01-15"
 compatibility_flags = ["nodejs_compat"]
 
+# Cloudflareアカウント設定（ヒューマンエラー防止）
+account_id = "your_cloudflare_account_id_here"
+# zone_id = "your_zone_id_here"  # カスタムドメイン使用時のみ必要
+
 # 15分間隔でRSSチェックを実行
 [triggers]
 crons = ["*/15 * * * *"]

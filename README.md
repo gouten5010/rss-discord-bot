@@ -37,10 +37,15 @@
    - **Scopes**: `bot`, `applications.commands`
 4. 生成されたURLでボットをサーバーに招待
 
-#### Cloudflare Workers設定
-1. [Cloudflare Dashboard](https://dash.cloudflare.com/)でアカウント作成
-2. Workers & Pages > Overview > Create Applicationを選択
-3. KV Namespaceを作成（RSS_STORAGE用）
+#### Cloudflare アカウント設定
+
+#### Cloudflare KV Namespace作成
+
+1. [Cloudflare Dashboard](https://dash.cloudflare.com/) > Workers & Pages > KV
+2. **Create a namespace** をクリック
+3. 名前を設定（例: `rss-discord-bot-storage`）
+4. **本番用**と**プレビュー用**の2つのNamespaceを作成
+5. 作成されたNamespace IDを`wrangler.toml`に設定
 
 ### 2. プロジェクトのクローンと依存関係
 
@@ -71,14 +76,27 @@ wrangler secret put DISCORD_WEBHOOK_URL
 
 ### 4. wrangler.tomlの設定
 
+**セキュリティのため、設定ファイルをコピーして実際のIDを設定：**
+
+```bash
+# テンプレートから設定ファイルを作成
+cp wrangler.example.toml wrangler.toml
+```
+
 `wrangler.toml`の以下の項目を更新：
 
 ```toml
+# Cloudflareアカウント設定
+account_id = "your_actual_cloudflare_account_id"
+
+# KV Namespace設定  
 [[kv_namespaces]]
 binding = "RSS_STORAGE"
-id = "your_kv_namespace_id"           # 本番用KV namespace ID
-preview_id = "your_preview_kv_id"     # プレビュー用KV namespace ID
+id = "your_actual_production_kv_namespace_id"
+preview_id = "your_actual_preview_kv_namespace_id"
 ```
+
+> ⚠️ **重要**: `wrangler.toml`は`.gitignore`に含まれており、リポジトリにコミットされません。KV Namespace IDなどの機密情報を保護するためです。
 
 ### 5. Discord Webhook URLの取得
 
@@ -89,6 +107,10 @@ preview_id = "your_preview_kv_id"     # プレビュー用KV namespace ID
 ### 6. デプロイ
 
 ```bash
+# デプロイ前の設定確認
+wrangler whoami  # ログイン中のアカウントを確認
+wrangler kv:namespace list  # KV Namespaceの存在確認
+
 # Discord Slash Commandsを登録
 npm run register-commands
 
@@ -174,11 +196,25 @@ npm run deploy
 │       └── restart.ts              # /rss restart コマンド
 ├── scripts/
 │   └── register-commands.ts        # コマンド登録スクリプト
+├── .env.example                    # 環境変数テンプレート
+├── .gitignore                      # Git除外設定
 ├── package.json
 ├── tsconfig.json
-├── wrangler.toml
+├── wrangler.example.toml           # Wrangler設定テンプレート
 └── README.md
 ```
+
+### セキュリティ設計
+
+**機密情報の保護:**
+- `wrangler.toml` - Git管理外（KV Namespace ID含む）
+- `.env` - Git管理外（Discord認証情報含む）
+- `*.example.*` - テンプレートファイルのみGit管理
+
+**認証とアカウント管理:**
+- **OAuth認証** - パスワード不要、ブラウザ経由の安全なログイン
+- **アカウント検証** - `account_id`による意図しないデプロイの防止
+- **トークン管理** - 期限付きAPIトークンによるセキュアな認証
 
 ## 🗂️ データ構造
 
@@ -309,14 +345,14 @@ curl -X POST https://your-worker.workers.dev/rss-check
 **原因**: `DISCORD_PUBLIC_KEY`が間違っている  
 **解決**: Discord Developer PortalでPublic Keyを再確認
 
-#### 3. 新着記事が投稿されない
+#### 4. 新着記事が投稿されない
 **原因**: Webhook URLが無効、またはフィードが一時停止中  
 **解決**:
 - Webhook URLを確認
 - `/rss list` でフィードステータスを確認
 - `/rss test` でフィードをテスト
 
-#### 4. KVストレージエラー
+#### 5. KVストレージエラー
 **原因**: KV Namespace IDが間違っている  
 **解決**: `wrangler.toml`のKV設定を確認
 
@@ -372,8 +408,15 @@ Cloudflare Dashboardで以下のメトリクスを確認可能：
 git clone https://github.com/your-username/rss-discord-bot.git
 cd rss-discord-bot
 npm install
+
+# 環境設定ファイルをコピー
 cp .env.example .env
-# .envファイルを編集
+cp wrangler.example.toml wrangler.toml
+
+# 設定ファイルを編集
+# .envファイルを編集してDiscord認証情報を設定
+# wrangler.tomlファイルを編集してKV Namespace IDを設定
+
 npm run dev
 ```
 
