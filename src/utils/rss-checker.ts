@@ -136,14 +136,26 @@ export class RSSChecker {
     }
 
     /**
-     * 記事をDiscordに投稿
+     * 記事をDiscordに投稿（通常テキスト形式）
      */
     private async postArticleToDiscord(article: Article, feed: any): Promise<boolean> {
         try {
-            const embed = createArticleEmbed(article, feed.customName || feed.title);
+            // 日時フォーマット
+            const pubDate = new Date(article.pubDate);
+            const dateStr = pubDate.toLocaleDateString('ja-JP', {
+                year: 'numeric',
+                month: 'numeric',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+
+            // 通常テキスト形式のメッセージ（サイトタイトル強調なし）
+            const message = `${feed.customName || feed.title}\n${article.title}\n${dateStr}\n${article.link}`;
 
             const success = await sendWebhookMessage(this.env.DISCORD_WEBHOOK_URL, {
-                embeds: [embed]
+                content: message,
+                // embedsを削除
             });
 
             if (success) {
