@@ -12,6 +12,8 @@ import { handleRemoveAllCommand } from './commands/remove-all';
 import { handleListCommand } from './commands/list';
 import { handleTestCommand } from './commands/test';
 import { handleRunCommand } from './commands/run';
+import { handlePauseCommand } from './commands/pause';
+import { handleRestartCommand } from './commands/restart';
 
 /**
  * Cloudflare Workers のメインハンドラ
@@ -286,12 +288,10 @@ async function handleApplicationCommand(interaction: InteractionRequest, env: En
                     response = await handleRunCommand(subInteraction, env);
                     break;
                 case 'pause':
-                    // Phase 3で実装予定
-                    response = createErrorResponse('pauseコマンドはPhase 3で実装予定です。');
+                    response = await handlePauseCommand(subInteraction, env);
                     break;
                 case 'restart':
-                    // Phase 3で実装予定
-                    response = createErrorResponse('restartコマンドはPhase 3で実装予定です。');
+                    response = await handleRestartCommand(subInteraction, env);
                     break;
                 default:
                     response = createErrorResponse(`未知のサブコマンドです: ${subcommand}`);

@@ -45,8 +45,24 @@ export async function handleListCommand(interaction: InteractionRequest, env: En
                 }
             ];
 
+            // 一時停止中のフィードがある場合は別途表示
+            if (pausedCount > 0) {
+                const pausedFeeds = feeds
+                    .filter(f => f.status === 'paused')
+                    .slice(0, 3) // 最大3件まで表示
+                    .map(feed => `• ${feed.id}: ${feed.title}`)
+                    .join('\n');
+
+                embed.fields.push({
+                    name: '⏸️ 一時停止中',
+                    value: pausedFeeds + (pausedCount > 3 ? `\n...他${pausedCount - 3}件` : ''),
+                    inline: true
+                });
+            }
+
             // 最近追加されたフィードの情報
             const recentFeeds = feeds
+                .filter(f => f.status === 'active') // アクティブなフィードのみ
                 .sort((a, b) => new Date(b.addedAt).getTime() - new Date(a.addedAt).getTime())
                 .slice(0, 3);
 
@@ -57,7 +73,7 @@ export async function handleListCommand(interaction: InteractionRequest, env: En
                 }).join('\n');
 
                 embed.fields.push({
-                    name: '🆕 最近追加',
+                    name: '🆕 最近追加（アクティブ）',
                     value: recentList,
                     inline: true
                 });
