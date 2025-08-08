@@ -420,16 +420,9 @@ cp wrangler.example.toml wrangler.toml
 npm run dev
 ```
 
-### プルリクエスト
-
-1. フィーチャーブランチを作成
-2. 変更を実装・テスト
-3. TypeScriptの型チェックを通す
-4. プルリクエストを作成
-
 ## 📄 ライセンス
 
-MIT License - 詳細は [LICENSE](LICENSE) ファイルを参照
+MIT License
 
 ## 🙏 謝辞
 
@@ -437,8 +430,3 @@ MIT License - 詳細は [LICENSE](LICENSE) ファイルを参照
 - [Discord.js](https://discord.js.org/) - Discord API Types
 - [TypeScript](https://www.typescriptlang.org/) - 型安全な開発環境
 
----
-
-**🚀 プロダクションレディなRSS Discord Bot**
-
-高可用性、セキュア、コスト効率的なRSSフィード監視ソリューション
