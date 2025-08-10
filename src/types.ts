@@ -22,6 +22,7 @@ export interface FeedInfo {
     status: 'active' | 'paused';   // フィードの状態
     addedAt: string;               // 登録日時（ISO8601形式）
     lastChecked?: string;          // 最終チェック日時（ISO8601形式）
+    lastPubDate?: string;  // ← 新規追加: 最終記事の公開日時
 }
 
 // フィードメタデータ（KVストレージに保存）

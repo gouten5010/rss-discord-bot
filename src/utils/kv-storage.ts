@@ -213,6 +213,15 @@ export class KVStorageManager {
         }
     }
 
+    async updateLastPubDate(feedId: string, pubDate: string): Promise<void> {
+        const metadata = await this.getFeedsMetadata();
+        if (metadata[feedId]) {
+            metadata[feedId].lastPubDate = pubDate;
+            await this.saveFeedsMetadata(metadata);
+            console.log(`Last pubDate updated for ${feedId}: ${pubDate}`);
+        }
+    }
+
     /**
      * 既読記事リストを取得
      */

@@ -83,26 +83,30 @@ export class RSSChecker {
         console.log(`🔍 ${feed.id} (${feed.title}) をチェック中...`);
 
         try {
-            // 最新3件の記事を取得
-            const articles = await parseArticles(feed.url, 3);
+            // より多くの記事を取得（過去記事の見落とし防止）
+            const articles = await parseArticles(feed.url, 20);
 
             if (articles.length === 0) {
                 console.log(`📰 ${feed.id}: 記事が見つかりません`);
+                await this.kvManager.updateLastChecked(feed.id);
                 return 0;
             }
 
-            // 既読記事リストを取得
-            const readArticles = await this.kvManager.getReadArticles(feed.id);
+            // 前回の最終pubDateを取得（初回は1970年1月1日）
+            const lastPubDate = feed.lastPubDate ? new Date(feed.lastPubDate) : new Date(0);
+            console.log(`📅 ${feed.id}: 前回最終日時 ${lastPubDate.toISOString()}`);
 
-            // 新着記事をフィルタ（古い順にソート）
+            // 前回より新しい記事のみフィルタ
             const newArticles = articles
-                .filter(article => !readArticles.includes(this.getArticleHash(article)))
-                .sort((a, b) => a.pubDate.getTime() - b.pubDate.getTime());
+                .filter(article => {
+                    const isNew = article.pubDate > lastPubDate;
+                    console.log(`📄 記事チェック: "${article.title}" - ${article.pubDate.toISOString()} - 新着: ${isNew}`);
+                    return isNew;
+                })
+                .sort((a, b) => a.pubDate.getTime() - b.pubDate.getTime()); // 古い順で投稿
 
             if (newArticles.length === 0) {
                 console.log(`📰 ${feed.id}: 新着記事なし`);
-
-                // 最終チェック時刻を更新
                 await this.kvManager.updateLastChecked(feed.id);
                 return 0;
             }
@@ -115,18 +119,20 @@ export class RSSChecker {
                 const success = await this.postArticleToDiscord(article, feed);
                 if (success) {
                     postedCount++;
-                    // 既読リストに追加
-                    await this.kvManager.addReadArticle(feed.id, this.getArticleHash(article));
-
                     // Discord API レート制限対策
                     await this.sleep(1000);
                 }
             }
 
+            // 最新のpubDateを保存（全記事の中で最も新しい日時）
+            const latestPubDate = Math.max(...articles.map(a => a.pubDate.getTime()));
+            const latestPubDateISO = new Date(latestPubDate).toISOString();
+            await this.kvManager.updateLastPubDate(feed.id, latestPubDateISO);
+
             // 最終チェック時刻を更新
             await this.kvManager.updateLastChecked(feed.id);
 
-            console.log(`✅ ${feed.id}: ${postedCount}件投稿完了`);
+            console.log(`✅ ${feed.id}: ${postedCount}件投稿完了, 最新日時: ${latestPubDateISO}`);
             return postedCount;
 
         } catch (error) {
@@ -189,7 +195,7 @@ export class RSSChecker {
 
         try {
             const feeds = await this.kvManager.getFeeds();
-            const activeFeeds = feeds.filter(feed => feed.status === 'active').slice(0, 1); // 最初の1件のみ
+            const activeFeeds = feeds.filter(feed => feed.status === 'active').slice(0, 1);
 
             if (activeFeeds.length === 0) {
                 console.log('ℹ️ チェック対象のフィードがありません');
@@ -200,17 +206,16 @@ export class RSSChecker {
 
             for (const feed of activeFeeds) {
                 try {
-                    const articles = await parseArticles(feed.url, 2); // 最新2件のみ
+                    const articles = await parseArticles(feed.url, 10);
 
                     if (articles.length === 0) continue;
 
-                    const readArticles = await this.kvManager.getReadArticles(feed.id);
-                    console.log(`📚 ${feed.id}の既読記事数: ${readArticles.length}`);
+                    const lastPubDate = feed.lastPubDate ? new Date(feed.lastPubDate) : new Date(0);
+                    console.log(`📅 ${feed.id}: クイックチェック - 前回最終日時 ${lastPubDate.toISOString()}`);
 
                     const newOnes = articles.filter(article => {
-                        const hash = this.getArticleHash(article);
-                        const isNew = !readArticles.includes(hash);
-                        console.log(`📄 記事: "${article.title}" - ハッシュ: ${hash} - 新着: ${isNew}`);
+                        const isNew = article.pubDate > lastPubDate;
+                        console.log(`📄 記事: "${article.title}" - ${article.pubDate.toISOString()} - 新着: ${isNew}`);
                         return isNew;
                     });
 
@@ -220,8 +225,13 @@ export class RSSChecker {
                         const success = await this.postArticleToDiscord(article, feed);
                         if (success) {
                             newArticles++;
-                            await this.kvManager.addReadArticle(feed.id, this.getArticleHash(article));
                         }
+                    }
+
+                    // 最新のpubDateを保存
+                    if (articles.length > 0) {
+                        const latestPubDate = Math.max(...articles.map(a => a.pubDate.getTime()));
+                        await this.kvManager.updateLastPubDate(feed.id, new Date(latestPubDate).toISOString());
                     }
 
                     await this.kvManager.updateLastChecked(feed.id);
