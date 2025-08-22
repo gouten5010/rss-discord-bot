@@ -124,15 +124,16 @@ export class RSSChecker {
                 }
             }
 
-            // 最新のpubDateを保存（全記事の中で最も新しい日時）
-            const latestPubDate = Math.max(...articles.map(a => a.pubDate.getTime()));
-            const latestPubDateISO = new Date(latestPubDate).toISOString();
-            await this.kvManager.updateLastPubDate(feed.id, latestPubDateISO);
+            // 投稿した記事がある場合のみlastPubDateを更新
+            if (postedCount > 0) {
+                const latestPostedPubDate = Math.max(...newArticles.map(a => a.pubDate.getTime()));
+                await this.kvManager.updateLastPubDate(feed.id, new Date(latestPostedPubDate).toISOString());
+            }
 
             // 最終チェック時刻を更新
             await this.kvManager.updateLastChecked(feed.id);
 
-            console.log(`✅ ${feed.id}: ${postedCount}件投稿完了, 最新日時: ${latestPubDateISO}`);
+            console.log(`✅ ${feed.id}: ${postedCount}件投稿完了`);
             return postedCount;
 
         } catch (error) {
@@ -228,10 +229,10 @@ export class RSSChecker {
                         }
                     }
 
-                    // 最新のpubDateを保存
-                    if (articles.length > 0) {
-                        const latestPubDate = Math.max(...articles.map(a => a.pubDate.getTime()));
-                        await this.kvManager.updateLastPubDate(feed.id, new Date(latestPubDate).toISOString());
+                    // 投稿した記事がある場合のみlastPubDateを更新
+                    if (newOnes.length > 0) {
+                        const latestPostedPubDate = Math.max(...newOnes.map(a => a.pubDate.getTime()));
+                        await this.kvManager.updateLastPubDate(feed.id, new Date(latestPostedPubDate).toISOString());
                     }
 
                     await this.kvManager.updateLastChecked(feed.id);
